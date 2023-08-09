@@ -1,4 +1,5 @@
 from vrp_model import *
+from SolutionDrawer import *
 
 class Solution():
     def __init__(self):
@@ -17,6 +18,7 @@ class Solver:
         self.warehouse = model.allNodes[0]
         self.cost_matrix = model.matrix
         self.capacity = model.capacity
+        self.max_routes = model.max_routes
         self.initial_solution = None
 
     def solve(self):
@@ -39,7 +41,7 @@ class Solver:
                 self.apply_best_customer_insertion(bestInsertionObject)
                 insertions += 1
             else:
-                if len(self.initial_solution.routes) + 1 > 14:
+                if len(self.initial_solution.routes) + 1 > self.max_routes:
                     print("No more vehicles to use")
                     break
                 else:
@@ -83,4 +85,5 @@ class Solver:
             for j in range (len(rt.nodes_sequence)):
                 print(rt.nodes_sequence[j].id, end=' ')
             print(rt.cost)
+        SolDrawer.draw('Inital_Sol', self.initial_solution, self.allNodes) #meta mono gia na vlepw ti ginetai
         print(self.initial_solution.cost)

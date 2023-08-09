@@ -4,4 +4,4 @@ from initial_solution import *
 m = Model()
 m.build_model()
 s = Solver(m)
-s.solve()
+initial_solution = s.solve()
