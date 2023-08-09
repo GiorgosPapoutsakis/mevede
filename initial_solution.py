@@ -72,12 +72,14 @@ class Solver:
         route_to_insert.nodes_sequence.append(customer_to_insert)
         node_before_inserted = route_to_insert.nodes_sequence[-2]
 
-        costAdded = self.cost_matrix[node_before_inserted.id][customer_to_insert.id] + customer_to_insert.uploading_time
+        distance_time_cost_added = self.cost_matrix[node_before_inserted.id][customer_to_insert.id]
 
-        route_to_insert.cost += costAdded
+        route_to_insert.time_cost += distance_time_cost_added
+        route_to_insert.cumulative_cost += route_to_insert.time_cost
         route_to_insert.load += customer_to_insert.demand
         customer_to_insert.isRouted = True
-        self.initial_solution.cost += costAdded
+        self.initial_solution.cost += route_to_insert.time_cost
+        route_to_insert.time_cost += customer_to_insert.uploading_time
         
     def report_solution(self, initial_solution):
         print("Cost:")
@@ -88,6 +90,6 @@ class Solver:
             rt = initial_solution.routes[i]
             for j in range(len(rt.nodes_sequence)):
                 print(rt.nodes_sequence[j].id, end=',')
-            print(" ",rt.cost)
+            print(" ",rt.cumulative_cost)
         
         SolDrawer.draw('Inital_Sol', self.initial_solution, self.allNodes) #meta mono gia na vlepw ti ginetai
