@@ -1,4 +1,4 @@
-from vrp_model import Model
+from vrp_model import *
 from initial_solution import *
 
 m = Model()

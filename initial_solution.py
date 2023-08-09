@@ -18,7 +18,7 @@ class Solver:
         self.warehouse = model.allNodes[0]
         self.cost_matrix = model.matrix
         self.capacity = model.capacity
-        self.max_routes = model.max_routes
+        self.max_routes = model.maxRoutes
         self.initial_solution = None
 
     def solve(self):
@@ -80,10 +80,14 @@ class Solver:
         self.initial_solution.cost += costAdded
         
     def report_solution(self, initial_solution):
+        print("Cost:")
+        print(self.initial_solution.cost)
+        print("Routes:")
+        print(len(initial_solution.routes))
         for i in range(len(initial_solution.routes)):
             rt = initial_solution.routes[i]
-            for j in range (len(rt.nodes_sequence)):
-                print(rt.nodes_sequence[j].id, end=' ')
-            print(rt.cost)
+            for j in range(len(rt.nodes_sequence)):
+                print(rt.nodes_sequence[j].id, end=',')
+            print(" ",rt.cost)
+        
         SolDrawer.draw('Inital_Sol', self.initial_solution, self.allNodes) #meta mono gia na vlepw ti ginetai
-        print(self.initial_solution.cost)

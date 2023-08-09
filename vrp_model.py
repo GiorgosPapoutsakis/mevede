@@ -32,6 +32,10 @@ class Model:
                 dist = math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2))
                 self.matrix[i][j] = dist
 
+        # NODES INFO
+        # for node in self.allNodes:
+        #     print(f"{node.id},{node.x},{node.y},{node.demand},{node.uploading_time}")
+
 class Node:
     def __init__(self,idd,xx,yy,dem,time):
         self.id = idd
