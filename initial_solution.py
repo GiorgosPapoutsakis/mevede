@@ -93,4 +93,4 @@ class Solver:
                 print(rt.nodes_sequence[j].id, end=',')
             print(" ",rt.cumulative_cost)
         
-        SolDrawer.draw('Inital_Sol', self.initial_solution, self.allNodes) #meta mono gia na vlepw ti ginetai
+        #SolDrawer.draw('Inital_Sol', self.initial_solution, self.allNodes) #meta mono gia na vlepw ti ginetai
