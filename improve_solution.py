@@ -1,7 +1,7 @@
 from vrp_model import *
 from SolutionDrawer import *
 from initial_solution import Solution
-#33456.130850391106
+#33804.84774780611
 
 class Swap_move:
     def __init__(self):
@@ -45,7 +45,7 @@ class Improver:
         while termination_condition is False:
             
             sm_obj.initialise_again() #olous tous telestes
-            #SolDrawer.draw(local_search_iterations, self.sol, self.allNodes)
+            SolDrawer.draw(local_search_iterations, self.sol, self.allNodes)
             
             if operator == 1:
                 self.find_best_swap_move(sm_obj)
@@ -86,14 +86,15 @@ class Improver:
                         node2_index_in_route = node1_index_in_route + 1
                     for node2_index_in_route in range(node1_index_in_route, len(target_rt.nodes_sequence)):
 
+                        #Orgin route INFO
                         is_last1 = (len(origin_rt.nodes_sequence)-node1_index_in_route-1) == 0
                         p1 = origin_rt.nodes_sequence[node1_index_in_route - 1] #previous
                         s1 = origin_rt.nodes_sequence[node1_index_in_route] #selected
                         if is_last1 is False:
                             n1 = origin_rt.nodes_sequence[node1_index_in_route + 1] #next
-                        #poses fores prostithetai to kostos dist(A->B) sto cumulative_cost sto sugkekrimeno route
-                        cost_multiplier1 = len(origin_rt.nodes_sequence)-node1_index_in_route
+                        cost_multiplier1 = len(origin_rt.nodes_sequence)-node1_index_in_route #fores pou prostithetai to cost[ dist(previous->selected)+selected.uploading_time ] sto cumulative_cost gia to sugkekrimeno route. Ean o selected OXI TELEUTAIOS: +cost[ dist(selcted->next)]*(multiplier-1)
 
+                        #Target route Info
                         is_last2 = (len(target_rt.nodes_sequence)-node2_index_in_route-1) == 0
                         p2 = target_rt.nodes_sequence[node2_index_in_route - 1]
                         s2 = target_rt.nodes_sequence[node2_index_in_route]
@@ -105,13 +106,25 @@ class Improver:
                         origin_route_cost_difference = None
                         target_route_cost_difference = None
 
-                        if origin_rt == target_rt:
-                            continue
+                        if (origin_rt == target_rt) and (node1_index_in_route == node2_index_in_route - 1):
+                            
+                            cost_removed = cost_multiplier1 * (self.cost_matrix[p1.id][s1.id] + s1.uploading_time) + cost_multiplier2 * (self.cost_matrix[s1.id][s2.id] + s2.uploading_time)
+                            if is_last2 is False:
+                                cost_removed += (cost_multiplier2-1) * self.cost_matrix[s2.id][n2.id]
+                            cost_added = cost_multiplier1 * (self.cost_matrix[p1.id][s2.id] + s2.uploading_time) + cost_multiplier2 * (self.cost_matrix[s2.id][s1.id] + s1.uploading_time)
+                            if is_last2 is False:
+                                cost_added += (cost_multiplier2-1) * self.cost_matrix[s1.id][n2.id]
+
+                            origin_route_cost_difference = cost_added - cost_removed
+                            target_route_cost_difference = 0
+                            total_move_cost_differce = cost_added - cost_removed                         
+                            
                         else:
-                            if origin_rt.load - s1.demand + s2.demand > self.capacity:
-                                continue
-                            if target_rt.load - s2.demand + s1.demand > self.capacity:
-                                continue
+                            if origin_rt != target_rt:
+                                if origin_rt.load - s1.demand + s2.demand > self.capacity:
+                                    continue
+                                if target_rt.load - s2.demand + s1.demand > self.capacity:
+                                    continue
 
                             cost_removed_rt1 = cost_multiplier1 * (self.cost_matrix[p1.id][s1.id] + s1.uploading_time)
                             if is_last1 is False:
@@ -127,8 +140,12 @@ class Improver:
                             if is_last2 is False:
                                 cost_added_rt2 += (cost_multiplier2-1)*self.cost_matrix[s1.id][n2.id]
 
-                            origin_route_cost_difference = cost_added_rt1 - cost_removed_rt1
-                            target_route_cost_difference = cost_added_rt2 - cost_removed_rt2
+                            if origin_rt == target_rt:
+                                origin_route_cost_difference = cost_added_rt1 + cost_added_rt2 - (cost_removed_rt1 + cost_removed_rt2)
+                                target_route_cost_difference = 0
+                            else:
+                                origin_route_cost_difference = cost_added_rt1 - cost_removed_rt1
+                                target_route_cost_difference = cost_added_rt2 - cost_removed_rt2
                             total_move_cost_differce = cost_added_rt1 + cost_added_rt2 - (cost_removed_rt1 + cost_removed_rt2)
 
                         if total_move_cost_differce < sm_obj.move_cost_difference:
