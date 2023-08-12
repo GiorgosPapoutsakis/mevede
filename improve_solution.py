@@ -30,6 +30,7 @@ class Improver:
         self.best_sol = None #den kserw an xreiazetai
 
     def improve(self):
+        #self.TestSolution()
         self.local_search(1)
         print("IMPROVED")
         self.sol.report_solution()

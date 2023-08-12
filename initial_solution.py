@@ -71,10 +71,10 @@ class Solver:
 
         distance_time_cost_added = self.cost_matrix[node_before_inserted.id][customer_to_insert.id]
 
-        route_to_insert.time_cost += distance_time_cost_added
-        route_to_insert.time_cost += customer_to_insert.uploading_time
-        route_to_insert.cumulative_cost += route_to_insert.time_cost
+        route_to_insert.initial_time_cost += distance_time_cost_added
+        route_to_insert.initial_time_cost += customer_to_insert.uploading_time
+        route_to_insert.cumulative_cost += route_to_insert.initial_time_cost
         route_to_insert.load += customer_to_insert.demand
         customer_to_insert.isRouted = True
-        self.initial_solution.cost += route_to_insert.time_cost
-        #route_to_insert.time_cost += customer_to_insert.uploading_time #Auto thelei i competitive(sol_checker)        
+        self.initial_solution.cost += route_to_insert.initial_time_cost
+        #route_to_insert.initial_time_cost += customer_to_insert.uploading_time #Auto thelei i competitive(sol_checker)        

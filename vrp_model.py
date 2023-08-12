@@ -49,7 +49,7 @@ class Route:
     def __init__(self,warehouse,capacity):
         self.nodes_sequence = []
         self.nodes_sequence.append(warehouse)
-        self.time_cost = 0.0
+        self.initial_time_cost = 0.0
         self.cumulative_cost = 0.0
         self.capacity = capacity
         self.load = 0
