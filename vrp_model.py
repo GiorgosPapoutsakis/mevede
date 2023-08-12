@@ -53,3 +53,36 @@ class Route:
         self.cumulative_cost = 0.0
         self.capacity = capacity
         self.load = 0
+
+class Solution():
+    def __init__(self):
+        self.cost = 0.0
+        self.routes = []
+
+    def report_solution(self):
+            print("***")
+            print("Cost:")
+            print(self.cost)
+            print("Routes:")
+            print(len(self.routes))
+            for i in range(len(self.routes)):
+                rt = self.routes[i]
+                for j in range(len(rt.nodes_sequence)):
+                    print(rt.nodes_sequence[j].id, end=',')
+                print(" ",rt.cumulative_cost)
+
+    def clone_solution(self, deposit_node, capacity): #pithanotata den xreiazetai
+        cloned_solution = Solution()
+        for i in range(len(self.routes)):
+            route = self.routes[i]
+            cloned_route = self.clone_route(route, deposit_node, capacity)
+            cloned_solution.routes.append(cloned_route)
+        cloned_solution.cost = self.cost
+        return cloned_solution
+
+    def clone_route(self, route, warehouse, capacity):
+        cloned_route = Route(warehouse, capacity)
+        cloned_route.cumulative_cost = route.cumulative_cost
+        cloned_route.load = route.load
+        cloned_route.nodes_sequence = route.nodes_sequence.copy()
+        return cloned_route

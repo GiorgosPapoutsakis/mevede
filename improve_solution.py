@@ -1,6 +1,5 @@
 from vrp_model import *
 from SolutionDrawer import *
-from initial_solution import Solution
 #33804.84774780611
 
 class Swap_move:
@@ -11,7 +10,7 @@ class Swap_move:
         self.selected_node2_pos = None
         self.cost_change_origin_rt = None
         self.cost_change_target_rt = None
-        self.move_cost_difference = None
+        self.move_cost_difference = 10**9
     
     def initialise_again(self):
         self.origin_rt_pos = None
@@ -23,29 +22,32 @@ class Swap_move:
         self.move_cost_difference = 10**9
 
 class Improver:
-    def __init__(self,initial_solution,model):
+    def __init__(self, initial_solution, model):
         self.sol = initial_solution
-        self.best_sol = None
-        self.allNodes = model.allNodes
-        self.warehouse = model.allNodes[0]      
+        self.allNodes = model.allNodes     
         self.cost_matrix = model.matrix
         self.capacity = model.capacity
+        self.best_sol = None #den kserw an xreiazetai
 
     def improve(self):
         self.local_search(1)
-        self.report_solution(self.sol)
+        print("IMPROVED")
+        self.sol.report_solution()
 
     def local_search(self, operator):
-        self.best_sol = self.clone_solution(self.sol)
+
+        # self.best_sol = self.sol.clone_solution(self.allNodes[0], self.capacity)
+        # print("CLONED")
+        # self.best_sol.report_solution()
+
         termination_condition = False
         local_search_iterations = 0
-
+        
         sm_obj = Swap_move()
 
         while termination_condition is False:
-            
             sm_obj.initialise_again() #olous tous telestes
-            SolDrawer.draw(local_search_iterations, self.sol, self.allNodes)
+            #SolDrawer.draw(local_search_iterations, self.sol, self.allNodes)
             
             if operator == 1:
                 self.find_best_swap_move(sm_obj)
@@ -56,24 +58,13 @@ class Improver:
                         termination_condition = True
 
             local_search_iterations += 1
+            #print(local_search_iterations, self.sol.cost) #extra mia epanalipsi gia na vgei
 
+        #     self.TestSolution()
 
-
-    def clone_solution(self,solution):
-        cloned_solution = Solution() #na valw klassi Solution sto vrp_model
-        for i in range(len(solution.routes)):
-            route = solution.routes[i]
-            cloned_route = self.clone_route(route)
-            cloned_solution.routes.append(cloned_route)
-        cloned_route.cost = solution.cost
-        return cloned_solution
-
-    def clone_route(self,route):
-        cloned_route = Route(self.warehouse, self.capacity)
-        cloned_route.cumulative_cost = route.cumulative_cost
-        cloned_route.load = route.load
-        cloned_route.nodes_sequence = route.nodes_sequence.copy()
-        return cloned_route
+        #     if (self.sol.cost < self.best_sol.cost):
+        #         self.best_sol = self.sol.clone_solution(self.allNodes[0], self.capacity)
+        # self.sol = self.best_sol
 
     def find_best_swap_move(self, sm_obj):
         for rt1_index in range(len(self.sol.routes)):
@@ -157,9 +148,7 @@ class Improver:
                             sm_obj.cost_change_target_rt = target_route_cost_difference
                             sm_obj.move_cost_difference = total_move_cost_differce
     
-    def apply_swap_move(self,sm_obj):
-        old_cost = self.sol.cost
-       
+    def apply_swap_move(self, sm_obj):
         route1 = self.sol.routes[sm_obj.origin_rt_pos]
         route2 = self.sol.routes[sm_obj.target_rt_pos]
         selected_node1 = route1.nodes_sequence[sm_obj.selected_node1_pos]
@@ -177,15 +166,31 @@ class Improver:
 
         self.sol.cost += sm_obj.move_cost_difference
 
-        
-    def report_solution(self, solution):
-        print("IMPROVED")
-        print("Cost:")
-        print(solution.cost)
-        print("Routes:")
-        print(len(solution.routes))
-        for i in range(len(solution.routes)):
-            rt = solution.routes[i]
-            for j in range(len(rt.nodes_sequence)):
-                print(rt.nodes_sequence[j].id, end=',')
-            print(" ",rt.cumulative_cost)
+
+################
+    def TestSolution(self):
+        testing_solution = self.sol
+        totalSolCost = 0
+        for r in range (len(testing_solution.routes)):
+            route = testing_solution.routes[r]
+            calc_rt_TimeCost = 0
+            calc_rtCost = 0
+            calc_rtLoad = 0
+            for n in range (len(route.nodes_sequence)-1):
+                A = route.nodes_sequence[n]
+                B = route.nodes_sequence[n+1]
+                calc_rt_TimeCost += self.cost_matrix[A.id][B.id] + B.uploading_time
+                calc_rtCost += calc_rt_TimeCost
+                calc_rtLoad += B.demand
+
+            if abs(calc_rtCost - route.cumulative_cost) > 0.0001:
+                #print(r, calc_rtCost, route.cumulative_cost)
+                print ('Route Cost problem')
+            if calc_rtLoad != route.load:
+                #print(r, calc_rtLoad, route.load)
+                print ('Route Load problem')
+            
+            totalSolCost += route.cumulative_cost
+        if abs(totalSolCost - self.sol.cost) > 0.0001:
+            print('Solution Cost problem')
+        print("TEST HAS ENDED")

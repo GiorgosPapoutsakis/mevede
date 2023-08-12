@@ -1,10 +1,5 @@
 from vrp_model import *
 from SolutionDrawer import *
-
-class Solution():
-    def __init__(self):
-        self.cost = 0.0
-        self.routes = []
     
 class CustomerInsertion(object):
     def __init__(self):
@@ -23,7 +18,9 @@ class Solver:
 
     def solve(self):
         self.apply_nearest_neighbor_method()
-        self.report_solution(self.initial_solution)
+        print("INITIAL")
+        self.initial_solution.report_solution()
+        #SolDrawer.draw('Inital_Sol', self.initial_solution, self.allNodes)
         return self.initial_solution
     
     def apply_nearest_neighbor_method(self):
@@ -80,17 +77,4 @@ class Solver:
         route_to_insert.load += customer_to_insert.demand
         customer_to_insert.isRouted = True
         self.initial_solution.cost += route_to_insert.time_cost
-        #route_to_insert.time_cost += customer_to_insert.uploading_time #Auto thelei i competitive(sol_checker)
-        
-    def report_solution(self, initial_solution):
-        print("Cost:")
-        print(self.initial_solution.cost)
-        print("Routes:")
-        print(len(initial_solution.routes))
-        for i in range(len(initial_solution.routes)):
-            rt = initial_solution.routes[i]
-            for j in range(len(rt.nodes_sequence)):
-                print(rt.nodes_sequence[j].id, end=',')
-            print(" ",rt.cumulative_cost)
-        
-        #SolDrawer.draw('Inital_Sol', self.initial_solution, self.allNodes) #meta mono gia na vlepw ti ginetai
+        #route_to_insert.time_cost += customer_to_insert.uploading_time #Auto thelei i competitive(sol_checker)        
