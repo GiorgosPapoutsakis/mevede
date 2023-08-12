@@ -87,12 +87,11 @@ class Improver:
                     for node2_index_in_route in range(node1_index_in_route, len(target_rt.nodes_sequence)):
 
                         is_last1 = (len(origin_rt.nodes_sequence)-node1_index_in_route-1) == 0
-                        #previous, selected, next
-                        p1 = origin_rt.nodes_sequence[node1_index_in_route - 1]
-                        s1 = origin_rt.nodes_sequence[node1_index_in_route]
+                        p1 = origin_rt.nodes_sequence[node1_index_in_route - 1] #previous
+                        s1 = origin_rt.nodes_sequence[node1_index_in_route] #selected
                         if is_last1 is False:
-                            n1 = origin_rt.nodes_sequence[node1_index_in_route + 1]
-                        #poses fores prostithetai to kostos dist(A->B) sto cumulative_cost sto sugkekrimenou route
+                            n1 = origin_rt.nodes_sequence[node1_index_in_route + 1] #next
+                        #poses fores prostithetai to kostos dist(A->B) sto cumulative_cost sto sugkekrimeno route
                         cost_multiplier1 = len(origin_rt.nodes_sequence)-node1_index_in_route
 
                         is_last2 = (len(target_rt.nodes_sequence)-node2_index_in_route-1) == 0
@@ -107,11 +106,7 @@ class Improver:
                         target_route_cost_difference = None
 
                         if origin_rt == target_rt:
-                            target_route_cost_difference = 0
-                            if node1_index_in_route == node2_index_in_route - 1:
-                                continue
-                            else:
-                                continue
+                            continue
                         else:
                             if origin_rt.load - s1.demand + s2.demand > self.capacity:
                                 continue
@@ -124,6 +119,7 @@ class Improver:
                             cost_added_rt1 = cost_multiplier1 * (self.cost_matrix[p1.id][s2.id] + s2.uploading_time)
                             if is_last1 is False:
                                 cost_added_rt1 += (cost_multiplier1-1) * self.cost_matrix[s2.id][n1.id]              
+                            
                             cost_removed_rt2 = cost_multiplier2 * (self.cost_matrix[p2.id][s2.id] + s2.uploading_time)
                             if is_last2 is False:
                                 cost_removed_rt2 += (cost_multiplier2-1) * self.cost_matrix[s2.id][n2.id]
@@ -146,6 +142,7 @@ class Improver:
     
     def apply_swap_move(self,sm_obj):
         old_cost = self.sol.cost
+       
         route1 = self.sol.routes[sm_obj.origin_rt_pos]
         route2 = self.sol.routes[sm_obj.target_rt_pos]
         selected_node1 = route1.nodes_sequence[sm_obj.selected_node1_pos]
@@ -153,30 +150,19 @@ class Improver:
         route1.nodes_sequence[sm_obj.selected_node1_pos] = selected_node2
         route2.nodes_sequence[sm_obj.selected_node2_pos] = selected_node1
 
-        #print("routes load",sm_obj.origin_rt_pos, route1.load, sm_obj.target_rt_pos, route2.load)
         if route1 == route2:
             route1.cumulative_cost += sm_obj.cost_change_origin_rt
         else:
             route1.cumulative_cost += sm_obj.cost_change_origin_rt
             route2.cumulative_cost += sm_obj.cost_change_target_rt
             route1.load = route1.load - selected_node1.demand + selected_node2.demand
-            route2.load = route2.load + selected_node2.demand - selected_node1.demand
+            route2.load = route2.load - selected_node2.demand + selected_node1.demand
 
-        #print("routes load AFTER",sm_obj.origin_rt_pos, route1.load, sm_obj.target_rt_pos, route2.load)
-        self.check_capacities(route1,route2)
-    
         self.sol.cost += sm_obj.move_cost_difference
-
-    def check_capacities(self,rt1,rt2):
-        load1, load2 = 0, 0
-        for node in rt1.nodes_sequence:            
-            load1 += node.demand
-        for node2 in rt2.nodes_sequence:            
-            load2 += node2.demand
-        print("routes_load", load1, load2)
 
         
     def report_solution(self, solution):
+        print("IMPROVED")
         print("Cost:")
         print(solution.cost)
         print("Routes:")
