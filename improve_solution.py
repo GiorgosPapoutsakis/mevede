@@ -1,6 +1,7 @@
 from vrp_model import *
 from SolutionDrawer import *
 from initial_solution import Solution
+#33456.130850391106
 
 class Swap_move:
     def __init__(self):
@@ -25,13 +26,14 @@ class Improver:
     def __init__(self,initial_solution,model):
         self.sol = initial_solution
         self.best_sol = None
+        self.allNodes = model.allNodes
+        self.warehouse = model.allNodes[0]      
         self.cost_matrix = model.matrix
-        self.warehouse = model.allNodes[0]
         self.capacity = model.capacity
 
     def improve(self):
         self.local_search(1)
-        #self.report_solution(self.sol)
+        self.report_solution(self.sol)
 
     def local_search(self, operator):
         self.best_sol = self.clone_solution(self.sol)
@@ -43,10 +45,17 @@ class Improver:
         while termination_condition is False:
             
             sm_obj.initialise_again() #olous tous telestes
+            #SolDrawer.draw(local_search_iterations, self.sol, self.allNodes)
             
             if operator == 1:
                 self.find_best_swap_move(sm_obj)
-                return
+                if sm_obj.origin_rt_pos is not None:
+                    if sm_obj.move_cost_difference < 0:
+                        self.apply_swap_move(sm_obj)
+                    else:
+                        termination_condition = True
+
+            local_search_iterations += 1
 
 
 
@@ -83,7 +92,7 @@ class Improver:
                         s1 = origin_rt.nodes_sequence[node1_index_in_route]
                         if is_last1 is False:
                             n1 = origin_rt.nodes_sequence[node1_index_in_route + 1]
-                        #poses fores prostithetai to kostos d(A->B) sto cumulative_cost sto sugkekrimenou route
+                        #poses fores prostithetai to kostos dist(A->B) sto cumulative_cost sto sugkekrimenou route
                         cost_multiplier1 = len(origin_rt.nodes_sequence)-node1_index_in_route
 
                         is_last2 = (len(target_rt.nodes_sequence)-node2_index_in_route-1) == 0
@@ -134,7 +143,39 @@ class Improver:
                             sm_obj.cost_change_origin_rt = origin_route_cost_difference
                             sm_obj.cost_change_target_rt = target_route_cost_difference
                             sm_obj.move_cost_difference = total_move_cost_differce
+    
+    def apply_swap_move(self,sm_obj):
+        old_cost = self.sol.cost
+        route1 = self.sol.routes[sm_obj.origin_rt_pos]
+        route2 = self.sol.routes[sm_obj.target_rt_pos]
+        selected_node1 = route1.nodes_sequence[sm_obj.selected_node1_pos]
+        selected_node2 = route2.nodes_sequence[sm_obj.selected_node2_pos]
+        route1.nodes_sequence[sm_obj.selected_node1_pos] = selected_node2
+        route2.nodes_sequence[sm_obj.selected_node2_pos] = selected_node1
 
+        #print("routes load",sm_obj.origin_rt_pos, route1.load, sm_obj.target_rt_pos, route2.load)
+        if route1 == route2:
+            route1.cumulative_cost += sm_obj.cost_change_origin_rt
+        else:
+            route1.cumulative_cost += sm_obj.cost_change_origin_rt
+            route2.cumulative_cost += sm_obj.cost_change_target_rt
+            route1.load = route1.load - selected_node1.demand + selected_node2.demand
+            route2.load = route2.load + selected_node2.demand - selected_node1.demand
+
+        #print("routes load AFTER",sm_obj.origin_rt_pos, route1.load, sm_obj.target_rt_pos, route2.load)
+        self.check_capacities(route1,route2)
+    
+        self.sol.cost += sm_obj.move_cost_difference
+
+    def check_capacities(self,rt1,rt2):
+        load1, load2 = 0, 0
+        for node in rt1.nodes_sequence:            
+            load1 += node.demand
+        for node2 in rt2.nodes_sequence:            
+            load2 += node2.demand
+        print("routes_load", load1, load2)
+
+        
     def report_solution(self, solution):
         print("Cost:")
         print(solution.cost)
