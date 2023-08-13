@@ -1,6 +1,6 @@
 from vrp_model import *
 from SolutionDrawer import *
-#33804.84774780611
+#32028.047685567122
 
 class Swap_move:
     def __init__(self):
@@ -10,13 +10,30 @@ class Swap_move:
         self.selected_node2_pos = None
         self.cost_change_origin_rt = None
         self.cost_change_target_rt = None
-        self.move_cost_difference = 10**9
-    
+        self.move_cost_difference = 10**9    
     def initialise_again(self):
         self.origin_rt_pos = None
         self.target_rt_pos = None
         self.selected_node1_pos = None
         self.selected_node2_pos = None
+        self.cost_change_origin_rt = None
+        self.cost_change_target_rt = None
+        self.move_cost_difference = 10**9
+
+class Relocation_move:
+    def __init__(self):
+        self.origin_rt_pos = None
+        self.target_rt_pos = None
+        self.origin_node1_pos = None
+        self.target_node2_pos = None
+        self.cost_change_origin_rt = None
+        self.cost_change_target_rt = None
+        self.move_cost_difference = 10**9    
+    def initialise_again(self):
+        self.origin_rt_pos = None
+        self.target_rt_pos = None
+        self.origin_node1_pos = None
+        self.target_node2_pos = None
         self.cost_change_origin_rt = None
         self.cost_change_target_rt = None
         self.move_cost_difference = 10**9
@@ -31,7 +48,7 @@ class Improver:
 
     def improve(self):
         #self.TestSolution()
-        self.local_search(1)
+        self.local_search(0)
         print("IMPROVED")
         self.sol.report_solution()
 
@@ -45,12 +62,23 @@ class Improver:
         local_search_iterations = 0
         
         sm_obj = Swap_move()
+        rm_obj = Relocation_move()
 
         while termination_condition is False:
-            sm_obj.initialise_again() #olous tous telestes
+            rm_obj.initialise_again()
+            sm_obj.initialise_again()
             #SolDrawer.draw(local_search_iterations, self.sol, self.allNodes)
             
-            if operator == 1:
+            #Relocations
+            if operator == 0:
+                self.find_best_relocation_move(rm_obj)
+                if rm_obj.origin_rt_pos is not None:
+                    if rm_obj.move_cost_difference <0:
+                        self.apply_relocation_move(rm_obj)
+                    else:
+                        termination_condition = True
+            #Swaps
+            elif operator == 1:
                 self.find_best_swap_move(sm_obj)
                 if sm_obj.origin_rt_pos is not None:
                     if sm_obj.move_cost_difference < 0:
@@ -59,9 +87,14 @@ class Improver:
                         termination_condition = True
 
             local_search_iterations += 1
-            #print(local_search_iterations, self.sol.cost) #extra mia epanalipsi gia na vgei
+            #print("iterations:",local_search_iterations, self.sol.cost) #extra mia epanalipsi gia na vgei
+        #print(local_search_iterations, self.sol.cost)
 
-        #     self.TestSolution()
+            # if self.TestSolution() > 0:
+            #     print("PROBLEM")
+            #     break
+            # else:
+            #     print("Test passed")
 
         #     if (self.sol.cost < self.best_sol.cost):
         #         self.best_sol = self.sol.clone_solution(self.allNodes[0], self.capacity)
@@ -70,7 +103,7 @@ class Improver:
     def find_best_swap_move(self, sm_obj):
         for rt1_index in range(len(self.sol.routes)):
             origin_rt = self.sol.routes[rt1_index]
-            for rt2_index in range(1, len(self.sol.routes)):
+            for rt2_index in range(len(self.sol.routes)):
                 target_rt = self.sol.routes[rt2_index]
                 for node1_index_in_route in range(1, len(origin_rt.nodes_sequence)):
                     node2_index_in_route = 1
@@ -167,9 +200,108 @@ class Improver:
 
         self.sol.cost += sm_obj.move_cost_difference
 
+    def find_best_relocation_move(self, rm_obj):
+        for rt1_index in range(len(self.sol.routes)):
+            origin_rt = self.sol.routes[rt1_index]
+            time_so_far_in_origin_rt = 0
+            for node1_index_in_origin_rt in range(1, len(origin_rt.nodes_sequence)):
+                prev_node_rt1 = origin_rt.nodes_sequence[node1_index_in_origin_rt-1]
+                node_rt1 = origin_rt.nodes_sequence[node1_index_in_origin_rt]
+                time_so_far_in_origin_rt += self.cost_matrix[prev_node_rt1.id][node_rt1.id] + node_rt1.uploading_time
+                
+                for rt2_index in range(len(self.sol.routes)):
+                    target_rt = self.sol.routes[rt2_index]
+                    time_so_far_in_target_rt = 0
+                    for node2_index_in_target_rt in range(1,len(target_rt.nodes_sequence)):
+                        prev_node_rt2 = target_rt.nodes_sequence[node2_index_in_target_rt-1]
+                        node_rt2 = target_rt.nodes_sequence[node2_index_in_target_rt]
+                        time_so_far_in_target_rt += self.cost_matrix[prev_node_rt2.id][node_rt2.id] + node_rt2.uploading_time
+                    
+
+                        if origin_rt == target_rt and (node1_index_in_origin_rt==node2_index_in_target_rt or node1_index_in_origin_rt-1==node2_index_in_target_rt):
+                            continue
+
+                        #Origin route Info
+                        is_last1 = (len(origin_rt.nodes_sequence)-node1_index_in_origin_rt-1) == 0
+                        p1 = origin_rt.nodes_sequence[node1_index_in_origin_rt - 1] #previous
+                        s1 = origin_rt.nodes_sequence[node1_index_in_origin_rt] #selected
+                        if is_last1 is False:
+                            n1 = origin_rt.nodes_sequence[node1_index_in_origin_rt + 1] #next
+                        cost_multiplier1 = len(origin_rt.nodes_sequence) - node1_index_in_origin_rt
+
+                        #Target route info
+                        is_last2 = (len(target_rt.nodes_sequence)-node2_index_in_target_rt-1) == 0
+                        s2 = target_rt.nodes_sequence[node2_index_in_target_rt]
+                        if is_last2 is False:
+                            n2 = target_rt.nodes_sequence[node2_index_in_target_rt + 1]
+                        cost_multiplier2 = len(target_rt.nodes_sequence) - node2_index_in_target_rt
+
+                        total_move_cost_differce = None
+                        origin_route_cost_difference = None
+                        target_route_cost_difference = None
+
+                        if origin_rt == target_rt:
+                            continue
+                        else:
+                            if target_rt.load + s1.demand > origin_rt.capacity:
+                                continue
+
+                            if is_last1 is True:
+                                cost_removed_rt1 = time_so_far_in_origin_rt
+                                cost_added_rt1 = 0
+                            elif is_last2 is False:
+                                cost_removed_rt1 = time_so_far_in_origin_rt
+                                cost_removed_rt1 += (cost_multiplier1-1) * (self.cost_matrix[p1.id][s1.id] + s1.uploading_time)
+                                cost_removed_rt1 += (cost_multiplier1-1) * self.cost_matrix[s1.id][n1.id]
+                                cost_added_rt1 = (cost_multiplier1-1) * self.cost_matrix[p1.id][n1.id]
+
+                            if is_last2 is True:
+                                cost_removed_rt2 = 0
+                                cost_added_rt2 = cost_multiplier2 * (self.cost_matrix[s2.id][s1.id] + s1.uploading_time)
+                                cost_added_rt2 += time_so_far_in_target_rt
+                            elif is_last2 is False:
+                                cost_removed_rt2 = (cost_multiplier2-1) * self.cost_matrix[s2.id][n2.id]
+                                cost_added_rt2 = time_so_far_in_target_rt
+                                cost_added_rt2 += cost_multiplier2 * (self.cost_matrix[s2.id][s1.id] + s1.uploading_time)
+                                cost_added_rt2 += (cost_multiplier2-1) * self.cost_matrix[s1.id][n2.id]
+
+
+
+                            origin_route_cost_difference = cost_added_rt1 - cost_removed_rt1
+                            target_route_cost_difference = cost_added_rt2 - cost_removed_rt2
+                            total_move_cost_differce = cost_added_rt1 + cost_added_rt2 - (cost_removed_rt1 + cost_removed_rt2)
+
+                        if total_move_cost_differce < rm_obj.move_cost_difference:
+                            rm_obj.origin_rt_pos = rt1_index
+                            rm_obj.target_rt_pos = rt2_index
+                            rm_obj.origin_node_pos = node1_index_in_origin_rt
+                            rm_obj.target_node_pos = node2_index_in_target_rt
+                            rm_obj.cost_change_origin_rt = origin_route_cost_difference
+                            rm_obj.cost_change_target_rt = target_route_cost_difference
+                            rm_obj.move_cost_difference = total_move_cost_differce
+
+    def apply_relocation_move(self, rm_obj):
+
+        origin_route = self.sol.routes[rm_obj.origin_rt_pos]
+        target_route = self.sol.routes[rm_obj.target_rt_pos]
+        selected_node1 = origin_route.nodes_sequence[rm_obj.origin_node_pos]
+
+        if origin_route == target_route:
+            return
+        else:
+            del origin_route.nodes_sequence[rm_obj.origin_node_pos]
+            target_route.nodes_sequence.insert(rm_obj.target_node_pos + 1, selected_node1)
+            origin_route.cumulative_cost += rm_obj.cost_change_origin_rt
+            target_route.cumulative_cost += rm_obj.cost_change_target_rt
+            origin_route.load -= selected_node1.demand
+            target_route.load += selected_node1.demand
+
+        self.sol.cost += rm_obj.move_cost_difference
+        #print(f"moved from route:{rm_obj.origin_rt_pos} to {rm_obj.target_rt_pos}: node{selected_node1.id} to pos: {rm_obj.target_node_pos + 1}")
 
 ################
     def TestSolution(self):
+        failed_test = 0
         testing_solution = self.sol
         totalSolCost = 0
         for r in range (len(testing_solution.routes)):
@@ -185,13 +317,15 @@ class Improver:
                 calc_rtLoad += B.demand
 
             if abs(calc_rtCost - route.cumulative_cost) > 0.0001:
-                #print(r, calc_rtCost, route.cumulative_cost)
+                print(r, calc_rtCost, route.cumulative_cost)
                 print ('Route Cost problem')
+                failed_test += 1
             if calc_rtLoad != route.load:
                 #print(r, calc_rtLoad, route.load)
                 print ('Route Load problem')
+                failed_test += 1
             
             totalSolCost += route.cumulative_cost
         if abs(totalSolCost - self.sol.cost) > 0.0001:
             print('Solution Cost problem')
-        print("TEST HAS ENDED")
+        return failed_test
