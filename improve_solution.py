@@ -87,14 +87,14 @@ class Improver:
                         termination_condition = True
 
             local_search_iterations += 1
-            print("iterations:",local_search_iterations, self.sol.cost) #extra mia epanalipsi gia na vgei
+            #print("iterations:",local_search_iterations, self.sol.cost) #extra mia epanalipsi gia na vgei
         #print(local_search_iterations, self.sol.cost)
 
-            # if self.TestSolution() > 0:
-            #     print("PROBLEM")
-            #     break
-            # else:
-            #     print("Test passed")
+            if self.TestSolution() > 0:
+                print("PROBLEM")
+                break
+            else:
+                print("Test passed")
 
         #     if (self.sol.cost < self.best_sol.cost):
         #         self.best_sol = self.sol.clone_solution(self.allNodes[0], self.capacity)
@@ -103,7 +103,7 @@ class Improver:
     def find_best_swap_move(self, sm_obj):
         for rt1_index in range(len(self.sol.routes)):
             origin_rt = self.sol.routes[rt1_index]
-            for rt2_index in range(len(self.sol.routes)):
+            for rt2_index in range(len(self.sol.routes)): #mallon ksekinaw apo rt1_index
                 target_rt = self.sol.routes[rt2_index]
                 for node1_index_in_route in range(1, len(origin_rt.nodes_sequence)):
                     node2_index_in_route = 1
@@ -242,36 +242,39 @@ class Improver:
                         origin_route_cost_difference = None
                         target_route_cost_difference = None
 
-                        if origin_rt == target_rt:
-                            #Den sumberilamvanw uploading time giati ola ta nodes exoun to idio                            
+                        if origin_rt == target_rt:                          
                             cost_added_rt2, cost_removed_rt2 = 0, 0
                             if node2_index_in_target_rt > node1_index_in_origin_rt:
-                                extra_time_shifted_left = 0
+                                inclusive_time_from_s1_to_s2 = 0
                                 for i in range(node1_index_in_origin_rt +1, node2_index_in_target_rt):
                                     node1 = origin_rt.nodes_sequence[i]
                                     node2 = origin_rt.nodes_sequence[i+1]
-                                    extra_time_shifted_left += self.cost_matrix[node1.id][node2.id]
+                                    inclusive_time_from_s1_to_s2 += self.cost_matrix[node1.id][node2.id] + node1.uploading_time
 
                                 cost_removed_rt1 = cost_multiplier1 * self.cost_matrix[p1.id][s1.id]
                                 cost_removed_rt1 += (cost_multiplier1-1) * self.cost_matrix[s1.id][n1.id]
+                                cost_removed_rt1 += (cost_multiplier1 - cost_multiplier2) * s1.uploading_time
                                 cost_added_rt1 = cost_multiplier1 * self.cost_matrix[p1.id][n1.id]
                                 cost_added_rt1 += cost_multiplier2 * self.cost_matrix[s2.id][s1.id]
-                                cost_added_rt1 += extra_time_shifted_left
+                                cost_added_rt1 += inclusive_time_from_s1_to_s2
+                                cost_added_rt1 += s2.uploading_time
                                 if is_last2 is False:
                                     cost_added_rt1 += (cost_multiplier2-1) * self.cost_matrix[s1.id][n2.id]
                                     cost_removed_rt1 += (cost_multiplier2-1) * self.cost_matrix[s2.id][n2.id]
                             else:
-                                extra_time_shifted_right = 0
+                                inclusive_time_from_s2_to_s1 = 0
                                 for i in range(node2_index_in_target_rt +1, node1_index_in_origin_rt - 1):
                                     node1 = origin_rt.nodes_sequence[i]
                                     node2 = origin_rt.nodes_sequence[i+1]
-                                    extra_time_shifted_right += self.cost_matrix[node1.id][node2.id]
+                                    inclusive_time_from_s2_to_s1 += self.cost_matrix[node1.id][node2.id] + node1.uploading_time
+                                inclusive_time_from_s2_to_s1 += p1.uploading_time
                                                                 
                                 cost_removed_rt1 = cost_multiplier1 * self.cost_matrix[p1.id][s1.id]
                                 cost_removed_rt1 += (cost_multiplier2-1) * self.cost_matrix[s2.id][n2.id]
-                                cost_removed_rt1 += extra_time_shifted_right
+                                cost_removed_rt1 += inclusive_time_from_s2_to_s1
                                 cost_added_rt1 = (cost_multiplier2-1) * self.cost_matrix[s2.id][s1.id]
                                 cost_added_rt1 += (cost_multiplier2-2) * self.cost_matrix[s1.id][n2.id]
+                                cost_added_rt1 += (cost_multiplier2 - 1 - cost_multiplier1) * s1.uploading_time
                                 if is_last1 is False:
                                     cost_added_rt1 += (cost_multiplier1-1) * self.cost_matrix[p1.id][n1.id]
                                     cost_removed_rt1 += (cost_multiplier1-1) * self.cost_matrix[s1.id][n1.id]                                
@@ -321,10 +324,8 @@ class Improver:
             del origin_route.nodes_sequence[rm_obj.origin_node_pos]
             if (rm_obj.origin_node_pos < rm_obj.target_node_pos):
                 target_route.nodes_sequence.insert(rm_obj.target_node_pos, selected_node1)
-                #print("True1")
             else:
-                target_route.nodes_sequence.insert(rm_obj.target_node_pos + 1, selected_node1) #den vrike kanena sto px, isws me nvd vrei( na to thimamai na elegxw)
-                #print("True2")
+                target_route.nodes_sequence.insert(rm_obj.target_node_pos + 1, selected_node1) #den vrike gia seed=39, vrike gia seed=3, swsto me +1 gia origin_node_pos > target_node_pos
 
             origin_route.cumulative_cost += rm_obj.move_cost_difference        
         else:
