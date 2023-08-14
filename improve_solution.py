@@ -38,6 +38,24 @@ class Relocation_move:
         self.cost_change_target_rt = None
         self.move_cost_difference = 10**9
 
+class TwoOpt_move:
+    def __init__(self) -> None:
+        self.origin_rt_pos = None
+        self.target_rt_pos = None
+        self.origin_node1_pos = None
+        self.target_node2_pos = None
+        self.cost_change_origin_rt = None
+        self.cost_change_target_rt = None
+        self.move_cost_difference = 10**9
+    def initialise_again(self):
+        self.origin_rt_pos = None
+        self.target_rt_pos = None
+        self.origin_node1_pos = None
+        self.target_node2_pos = None
+        self.cost_change_origin_rt = None
+        self.cost_change_target_rt = None
+        self.move_cost_difference = 10**9
+
 class Improver:
     def __init__(self, initial_solution, model):
         self.sol = initial_solution
@@ -48,7 +66,7 @@ class Improver:
 
     def improve(self):
         #self.TestSolution()
-        self.local_search(0)
+        self.local_search(2)
         print("IMPROVED")
         self.sol.report_solution()
 
@@ -63,10 +81,12 @@ class Improver:
         
         sm_obj = Swap_move()
         rm_obj = Relocation_move()
+        tOpt_obj = TwoOpt_move()
 
         while termination_condition is False:
             rm_obj.initialise_again()
             sm_obj.initialise_again()
+            tOpt_obj.initialise_again()
             #SolDrawer.draw(local_search_iterations, self.sol, self.allNodes)
             
             #Relocations
@@ -85,20 +105,97 @@ class Improver:
                         self.apply_swap_move(sm_obj)
                     else:
                         termination_condition = True
+            #Two_Opt
+            elif operator == 2:
+                self.find_best_two_opt(tOpt_obj)
+                if tOpt_obj.origin_rt_pos is not None:
+                    if tOpt_obj.move_cost_difference < 0:
+                        self.apply_two_opt_move(tOpt_obj)
+                    else:
+                        termination_condition = True
 
             local_search_iterations += 1
             #print("iterations:",local_search_iterations, self.sol.cost) #extra mia epanalipsi gia na vgei
         #print(local_search_iterations, self.sol.cost)
 
-            if self.TestSolution() > 0:
-                print("PROBLEM")
-                break
-            else:
-                print("Test passed")
+            # if self.TestSolution() > 0:
+            #     print("PROBLEM")
+            #     break
+            # else:
+            #     print("Test passed")
 
         #     if (self.sol.cost < self.best_sol.cost):
         #         self.best_sol = self.sol.clone_solution(self.allNodes[0], self.capacity)
         # self.sol = self.best_sol
+
+    def find_best_two_opt(self, tOpt_obj):
+        for rt1_index in range(len(self.sol.routes)):
+            origin_rt = self.sol.routes[rt1_index]
+            for rt2_index in range(len(self.sol.routes)):
+                target_rt = self.sol.routes[rt2_index]
+                for node1_index_in_origin_rt in range(len(origin_rt.nodes_sequence)-1):
+                    start_node2_index = 0
+                    if rt1_index == rt2_index:
+                        start_node2_index = node1_index_in_origin_rt + 2
+                    for node2_index_in_target_rt in range(start_node2_index, len(target_rt.nodes_sequence)-1):
+                        
+                        s1 = origin_rt.nodes_sequence[node1_index_in_origin_rt]
+                        n1 = origin_rt.nodes_sequence[node1_index_in_origin_rt + 1]
+                        cost_multiplier1 = len(origin_rt.nodes_sequence) - node1_index_in_origin_rt
+                                                
+                        s2 = target_rt.nodes_sequence[node2_index_in_target_rt]
+                        n2 = target_rt.nodes_sequence[node2_index_in_target_rt + 1]
+                        cost_multiplier2 = len(target_rt.nodes_sequence) - node2_index_in_target_rt
+
+                        if origin_rt == target_rt:
+                            if node1_index_in_origin_rt and node2_index_in_target_rt == len(origin_rt.nodes_sequence) - 1:
+                                continue
+                            
+                            cost_removed_rt2, cost_added_rt2 = 0, 0
+                            cost_removed_rt1 = (cost_multiplier1-1) * self.cost_matrix[s1.id][n1.id] + (cost_multiplier2-1) * self.cost_matrix[s2.id][n2.id]
+                            cost_added_rt1 = (cost_multiplier1-1) * self.cost_matrix[s1.id][s2.id] + (cost_multiplier2-1) * self.cost_matrix[n1.id][n2.id]
+
+                            minus_multiplier = 1
+                            for i in range(node1_index_in_origin_rt + 1, node2_index_in_target_rt):
+                                node1 = origin_rt.nodes_sequence[i]
+                                node2 = origin_rt.nodes_sequence[i+1]
+                                cost_removed_rt1 += (cost_multiplier1-minus_multiplier) * self.cost_matrix[node1.id][node2.id]
+                                minus_multiplier += 1
+
+                            adder_multiplier = cost_multiplier1 - 1
+                            for i in range(node2_index_in_target_rt, node1_index_in_origin_rt + 1, -1):
+                                node1 = origin_rt.nodes_sequence[i]
+                                node2 = origin_rt.nodes_sequence[i-1]
+                                cost_added_rt1 += (adder_multiplier) * self.cost_matrix[node1.id][node2.id]
+                                adder_multiplier -= 1
+                        else:
+                            continue
+
+                        cost_change_origin_rt = cost_added_rt1 - cost_removed_rt1
+                        cost_change_target_rt = cost_added_rt2 - cost_removed_rt2
+                        total_move_cost_differce = cost_added_rt1 + cost_added_rt2 - (cost_removed_rt1 + cost_removed_rt2)
+
+                        if total_move_cost_differce < tOpt_obj.move_cost_difference:
+                            tOpt_obj.origin_rt_pos = rt1_index
+                            tOpt_obj.target_rt_pos = rt2_index
+                            tOpt_obj.origin_node_pos = node1_index_in_origin_rt
+                            tOpt_obj.target_node_pos = node2_index_in_target_rt
+                            tOpt_obj.cost_change_origin_rt = cost_change_origin_rt
+                            tOpt_obj.cost_change_target_rt = cost_change_target_rt
+                            tOpt_obj.move_cost_difference = total_move_cost_differce
+
+    def apply_two_opt_move(self, tOpt_obj):
+        origin_route = self.sol.routes[tOpt_obj.origin_rt_pos]
+        target_route = self.sol.routes[tOpt_obj.target_rt_pos]
+        
+        if origin_route == target_route:
+            reversed_segment = reversed(origin_route.nodes_sequence[tOpt_obj.origin_node_pos + 1: tOpt_obj.target_node_pos + 1])
+            origin_route.nodes_sequence[tOpt_obj.origin_node_pos + 1 : tOpt_obj.target_node_pos + 1] = reversed_segment
+            origin_route.cumulative_cost += tOpt_obj.cost_change_origin_rt
+        else:
+            pass        
+        self.sol.cost += tOpt_obj.move_cost_difference
+
 
     def find_best_swap_move(self, sm_obj):
         for rt1_index in range(len(self.sol.routes)):
@@ -106,10 +203,11 @@ class Improver:
             for rt2_index in range(len(self.sol.routes)): #mallon ksekinaw apo rt1_index
                 target_rt = self.sol.routes[rt2_index]
                 for node1_index_in_route in range(1, len(origin_rt.nodes_sequence)):
-                    node2_index_in_route = 1
+                    #node2_index_in_route = 1
+                    start_node2_index = 1
                     if origin_rt == target_rt:
-                        node2_index_in_route = node1_index_in_route + 1
-                    for node2_index_in_route in range(node1_index_in_route, len(target_rt.nodes_sequence)):
+                        start_node2_index = node1_index_in_route + 1
+                    for node2_index_in_route in range(start_node2_index, len(target_rt.nodes_sequence)):
 
                         #Orgin route INFO
                         is_last1 = (len(origin_rt.nodes_sequence)-node1_index_in_route-1) == 0
