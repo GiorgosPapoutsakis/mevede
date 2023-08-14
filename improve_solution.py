@@ -1,6 +1,6 @@
 from vrp_model import *
 from SolutionDrawer import *
-#32028.047685567122
+#31924.448077515277
 
 class Swap_move:
     def __init__(self):
@@ -87,7 +87,7 @@ class Improver:
                         termination_condition = True
 
             local_search_iterations += 1
-            #print("iterations:",local_search_iterations, self.sol.cost) #extra mia epanalipsi gia na vgei
+            print("iterations:",local_search_iterations, self.sol.cost) #extra mia epanalipsi gia na vgei
         #print(local_search_iterations, self.sol.cost)
 
             # if self.TestSolution() > 0:
@@ -205,6 +205,7 @@ class Improver:
             origin_rt = self.sol.routes[rt1_index]
             time_so_far_in_origin_rt = 0
             for node1_index_in_origin_rt in range(1, len(origin_rt.nodes_sequence)):
+                #xreiazontai gia ton upologismo tou time_so_far
                 prev_node_rt1 = origin_rt.nodes_sequence[node1_index_in_origin_rt-1]
                 node_rt1 = origin_rt.nodes_sequence[node1_index_in_origin_rt]
                 time_so_far_in_origin_rt += self.cost_matrix[prev_node_rt1.id][node_rt1.id] + node_rt1.uploading_time
@@ -213,6 +214,7 @@ class Improver:
                     target_rt = self.sol.routes[rt2_index]
                     time_so_far_in_target_rt = 0
                     for node2_index_in_target_rt in range(1,len(target_rt.nodes_sequence)):
+                        #xreiazontai gia ton upologismo tou time_so_far
                         prev_node_rt2 = target_rt.nodes_sequence[node2_index_in_target_rt-1]
                         node_rt2 = target_rt.nodes_sequence[node2_index_in_target_rt]
                         time_so_far_in_target_rt += self.cost_matrix[prev_node_rt2.id][node_rt2.id] + node_rt2.uploading_time
@@ -241,7 +243,38 @@ class Improver:
                         target_route_cost_difference = None
 
                         if origin_rt == target_rt:
-                            continue
+                            #Den sumberilamvanw uploading time giati ola ta nodes exoun to idio                            
+                            cost_added_rt2, cost_removed_rt2 = 0, 0
+                            if node2_index_in_target_rt > node1_index_in_origin_rt:
+                                extra_time_shifted_left = 0
+                                for i in range(node1_index_in_origin_rt +1, node2_index_in_target_rt):
+                                    node1 = origin_rt.nodes_sequence[i]
+                                    node2 = origin_rt.nodes_sequence[i+1]
+                                    extra_time_shifted_left += self.cost_matrix[node1.id][node2.id]
+
+                                cost_removed_rt1 = cost_multiplier1 * self.cost_matrix[p1.id][s1.id]
+                                cost_removed_rt1 += (cost_multiplier1-1) * self.cost_matrix[s1.id][n1.id]
+                                cost_added_rt1 = cost_multiplier1 * self.cost_matrix[p1.id][n1.id]
+                                cost_added_rt1 += cost_multiplier2 * self.cost_matrix[s2.id][s1.id]
+                                cost_added_rt1 += extra_time_shifted_left
+                                if is_last2 is False:
+                                    cost_added_rt1 += (cost_multiplier2-1) * self.cost_matrix[s1.id][n2.id]
+                                    cost_removed_rt1 += (cost_multiplier2-1) * self.cost_matrix[s2.id][n2.id]
+                            else:
+                                extra_time_shifted_right = 0
+                                for i in range(node2_index_in_target_rt +1, node1_index_in_origin_rt - 1):
+                                    node1 = origin_rt.nodes_sequence[i]
+                                    node2 = origin_rt.nodes_sequence[i+1]
+                                    extra_time_shifted_right += self.cost_matrix[node1.id][node2.id]
+                                                                
+                                cost_removed_rt1 = cost_multiplier1 * self.cost_matrix[p1.id][s1.id]
+                                cost_removed_rt1 += (cost_multiplier2-1) * self.cost_matrix[s2.id][n2.id]
+                                cost_removed_rt1 += extra_time_shifted_right
+                                cost_added_rt1 = (cost_multiplier2-1) * self.cost_matrix[s2.id][s1.id]
+                                cost_added_rt1 += (cost_multiplier2-2) * self.cost_matrix[s1.id][n2.id]
+                                if is_last1 is False:
+                                    cost_added_rt1 += (cost_multiplier1-1) * self.cost_matrix[p1.id][n1.id]
+                                    cost_removed_rt1 += (cost_multiplier1-1) * self.cost_matrix[s1.id][n1.id]                                
                         else:
                             if target_rt.load + s1.demand > origin_rt.capacity:
                                 continue
@@ -265,11 +298,9 @@ class Improver:
                                 cost_added_rt2 += cost_multiplier2 * (self.cost_matrix[s2.id][s1.id] + s1.uploading_time)
                                 cost_added_rt2 += (cost_multiplier2-1) * self.cost_matrix[s1.id][n2.id]
 
-
-
-                            origin_route_cost_difference = cost_added_rt1 - cost_removed_rt1
-                            target_route_cost_difference = cost_added_rt2 - cost_removed_rt2
-                            total_move_cost_differce = cost_added_rt1 + cost_added_rt2 - (cost_removed_rt1 + cost_removed_rt2)
+                        origin_route_cost_difference = cost_added_rt1 - cost_removed_rt1
+                        target_route_cost_difference = cost_added_rt2 - cost_removed_rt2
+                        total_move_cost_differce = cost_added_rt1 + cost_added_rt2 - (cost_removed_rt1 + cost_removed_rt2)
 
                         if total_move_cost_differce < rm_obj.move_cost_difference:
                             rm_obj.origin_rt_pos = rt1_index
@@ -287,7 +318,15 @@ class Improver:
         selected_node1 = origin_route.nodes_sequence[rm_obj.origin_node_pos]
 
         if origin_route == target_route:
-            return
+            del origin_route.nodes_sequence[rm_obj.origin_node_pos]
+            if (rm_obj.origin_node_pos < rm_obj.target_node_pos):
+                target_route.nodes_sequence.insert(rm_obj.target_node_pos, selected_node1)
+                #print("True1")
+            else:
+                target_route.nodes_sequence.insert(rm_obj.target_node_pos + 1, selected_node1) #den vrike kanena sto px, isws me nvd vrei( na to thimamai na elegxw)
+                #print("True2")
+
+            origin_route.cumulative_cost += rm_obj.move_cost_difference        
         else:
             del origin_route.nodes_sequence[rm_obj.origin_node_pos]
             target_route.nodes_sequence.insert(rm_obj.target_node_pos + 1, selected_node1)

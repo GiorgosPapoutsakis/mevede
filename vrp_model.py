@@ -68,8 +68,12 @@ class Solution():
             for i in range(len(self.routes)):
                 rt = self.routes[i]
                 for j in range(len(rt.nodes_sequence)):
-                    print(rt.nodes_sequence[j].id, end=',')
-                print(" ",rt.cumulative_cost)
+                    if j != len(rt.nodes_sequence)-1:
+                        print(rt.nodes_sequence[j].id, end=',')
+                    else:
+                        print(rt.nodes_sequence[j].id, end='')
+                        #print(" ",rt.cumulative_cost)
+                        print()
 
     def clone_solution(self, deposit_node, capacity): #pithanotata den xreiazetai
         cloned_solution = Solution()
