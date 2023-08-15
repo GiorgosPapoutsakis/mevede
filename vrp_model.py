@@ -72,7 +72,7 @@ class Solution():
                         print(rt.nodes_sequence[j].id, end=',')
                     else:
                         print(rt.nodes_sequence[j].id, end='')
-                        #print(" ",rt.cumulative_cost)
+                        print(" ",rt.cumulative_cost, end="")
                         print()
 
     def clone_solution(self, deposit_node, capacity): #pithanotata den xreiazetai
